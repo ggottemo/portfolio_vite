@@ -1,0 +1,12 @@
+$fontColor: #FFFF;
+$fontFamily: 'Roboto', sans-serif;
+$fontSize: 1.5rem;
+$fontWeight: 700;
+$fontStyle: normal;
+body {
+    font-family: $fontFamily;
+    font-size: $fontSize;
+    font-weight: $fontWeight;
+    font-style: $fontStyle;
+    color: $fontColor;
+}
