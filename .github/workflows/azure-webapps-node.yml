@@ -48,6 +48,16 @@ jobs:
         npm run build --if-present
         npm run test --if-present
 
+
+    - run:
+        name: Compress Artifacts
+        command: tar -cvzf deploy.tar ./dist
+
+    - store_artifacts:
+        path: deploy.tar
+        destination: artifact_name
+
+
     - name: Upload artifact for deployment job
       uses: actions/upload-artifact@v3
       with:
