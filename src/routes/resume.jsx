@@ -8,11 +8,11 @@ const Resume = () => {
     return (
         <div>
             <NavBar />
-            <a href="public/George_Gottemoeller_Resume.pdf">
+            <a href="/George_Gottemoeller_Resume.pdf">
 
             </a>
             <div id="resume-container">
-            <embed src="public/George_Gottemoeller_Resume.pdf" type="application/pdf" width="100%" height="100%"/>
+            <embed src="/George_Gottemoeller_Resume.pdf" type="application/pdf" width="100%" height="100%"/>
                 <Button variant="outlined"  css={css`
             position:relative;
             
