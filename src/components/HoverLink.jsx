@@ -6,7 +6,8 @@ import { NavLink} from "react-router-dom";
 const HoverLink = ({ to, children }) => {
 
     let activeStyle = {
-        color: "teal",
+        color: "lightblue",
+        display: "inline-block",
     }
     return (
         <NavLink
@@ -15,6 +16,7 @@ const HoverLink = ({ to, children }) => {
             isActive ? activeStyle : null
 
         }
+        className="hover-link"
         >
         {children}
         </NavLink>

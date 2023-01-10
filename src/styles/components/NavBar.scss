@@ -1,17 +1,18 @@
 // Navbar component styles
 
 $navbar-height: 60px;
-$navbar-padding: 1rem 30vw;
+
 $navbar-bg: rgba(0,0,0,0.3);
 $navbar-border: 1px solid #e0e0e0;
 $navbar-border-radius: 0.25rem;
 $navbar-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-$navbar-transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+$navbar-transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) ;
+
 $navbar-brand-font: 'NTR', sans-serif;
 
 .navbar {
   height: $navbar-height;
-  padding: $navbar-padding;
+  padding: 0 1rem;
   background: $navbar-bg;
   border: $navbar-border;
   border-radius: $navbar-border-radius;
@@ -20,66 +21,104 @@ $navbar-brand-font: 'NTR', sans-serif;
   display: flex;
   align-items: center;
     justify-content: space-between;
+  flex-shrink: 0;
   font-family: $navbar-brand-font;
   font-size: 1.5rem;
   text-decoration-line: none;
-  a:hover {
-    color: #14EFD7;
-    text-decoration: none;
-  }
-  a:visited {
-    color: #fff;
-    text-decoration: none;
+
+
+
+
+
+
+// Navbar Menu Opened
+  &.open {
+    box-shadow: none;
+    height: 60vh;
+
+    .menu-icon {
+      transform: rotate(270deg);
+      font-size: 4rem;
+    }
+
+    .navbar-container {
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-evenly;
+        display: block;
+        font-size: 2rem;
+      :not(.hover-link-active) {
+        display: block;
+      }
+    }
+// git hub and linked in links
+    .social-icons > a > svg {
+        width: 4rem;
+        height:4rem;
+    }
+    .social-icons {
+       display: flex;
+      flex-flow: column;
+    }
+
+
+
   }
 
-}
-.navbar__right {
+  .navbar-container {
     display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+    #contact {
 
-    width: 30vw;
-    a {
-
+      text-decoration: none;
+    }
+     a {
         color: #fff;
         text-decoration: none;
         margin: 0 1rem;
-        font-size: 1.5rem;
-        font-weight: 700;
-        font-style: normal;
+        transition: $navbar-transition;
         &:hover {
-        color: rgba(20,239,215,0.5);
-        text-decoration: none;
+            color: #fff;
+            text-decoration: none;
         }
-      svg {
-        width: 2.5rem;
-        height: 2.5rem;
-        margin-left: 1rem;
-        margin-top: 1rem;
-        color: #fff;
-        &:hover {
-          color: rgba(20,239,215,0.5);
-        }
-      }
-    }
-}
-.navbar__left {
+
+       &:not(.hover-link-active) {
+         display: none;
+       }
+
+
+
+     }
+
+
+  }
+  .social-icons {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 30vw;
+    width: 120px;
+    margin: 0 1rem;
     a {
-        color: #fff;
-        text-decoration: none;
-        margin: 0 1rem;
-        font-size: 1.5rem;
-        font-weight: 700;
-        font-style: normal;
-        &:hover {
-        color: #fff;
-        text-decoration: none;
-        }
+      color: #fff;
+      text-decoration: none;
+      font-size: 1.5rem;
+      transition: $navbar-transition;
+      &:hover {
+        color: #14EFD7;
+      }
+
+    svg {
+        width: 2.5rem;
+        height: 2.5rem;
+        margin-top: 1rem;
     }
+    }
+  }
+
 }
 
 
@@ -88,15 +127,35 @@ $navbar-brand-font: 'NTR', sans-serif;
   font-weight: 700;
 }
 
-.navbar-toggler {
-  padding: 0.25rem 0.75rem;
-  font-size: 1.25rem;
-  line-height: 1;
-  background-color: transparent;
-  border: 1px solid transparent;
-  border-radius: $navbar-border-radius;
+
+
+
+.hidden {
+    display: none;
 }
 
-.hover-link-active {
-  color: #14EFD7 !important;
+
+@media screen and (min-width: $small) {
+  .navbar {
+    padding: 0 2rem;
+
+    .navbar-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
+
+      a {
+        &:not(.hover-link-active) {
+          display: inline-block;
+        }
+      }
+    }
+
+  .menu-icon {
+    display: none;
+  }
+  }
 }
