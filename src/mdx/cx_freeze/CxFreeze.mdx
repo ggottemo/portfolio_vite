@@ -1,0 +1,333 @@
+import CodeContainer from "../../components/CodeContainer";
+export const title =
+  "Creating MSIs with cx_Freeze for Distribution to Managed Users";
+export const date = "2023-04-15";
+export const tags = ["python", "cx_freeze", "msi", "windows"];
+
+# Creating MSIs with cx_Freeze for Distribution to Managed Users
+
+Distributing software applications in a managed enterprise environment can be a complex and challenging task.
+One popular method for deploying and managing software across multiple machines is to use Windows MSI files, which
+provide a standardized and reliable way of managing application installations, updates, and removals. A recent project
+I worked on required the creation of an MSI file for a Python application using the cx_Freeze library. Throughout this post,
+I will examine some of the challenges faced during this project, specifically surrounding customizing the installation process
+so that it could be distributed to users with varying permissions. I will also discuss some of the tools I used
+to create the MSI file, and how I was able to move past some of the challenges caused by the sparse documentation of
+cx_Freeze.
+
+<br />
+
+## Setup.py
+
+Setup.py is used by cx*freeze to set options for freezing and building your application into an executable \_and*
+for packaging that executable into an installer. In this case, an MSI using the `bdist_msi` command.
+
+An example options variable looks like this:
+
+<CodeContainer
+  title="setup.py"
+  language="python"
+  value={`
+    options = {
+    "build_exe": {
+        "bin_excludes": ["libqpdf.so", "libqpdf.dylib"],
+        # exclude packages that are not really needed
+        "excludes": [
+            "tkinter",
+            "unittest",
+            "http",
+            "pydoc",
+        ],
+        "packages": [
+            "PySide6.QtCore",
+            "PySide6.QtGui",
+            "PySide6.QtWidgets",
+            "barcode",
+            "email",
+            "win32api",
+            "win32print",
+            "debugpy",
+        ],
+        "include_files": [
+            find_data_file("template.png"),
+            find_data_file("icon.ico"),
+            find_data_file("error.png"),
+            find_data_file("PRinter/pythoncom310.dll"),
+            find_data_file("PRinter/pywintypes310.dll"),
+        ],
+        "optimize": 1,
+        "silent": True,
+        # Include the Microsoft Visual C Redistributable for Pyside6
+        "include_msvcr": True,
+    },
+    "bdist_msi": bdist_msi_options,
+    }
+`}
+/>
+
+The options variable should be a dictionary with the command names as keys and desired options as values. For example,
+the `build_exe` item includes the options related to freezing and building your application. Nothing is too spectacular
+here - by following through the cx_freeze docs, you should be able to get to this point.
+
+Note that the `find_data_files` method is just for finding other required files. Depending on if the application is frozen
+or not, they can be in a different location:
+
+<CodeContainer
+  title="find_data_file"
+  language="python"
+  value={`
+    # Data Files
+    def find_data_file(filename):
+    if getattr(sys, "frozen", False):
+        # The application is frozen
+        datadir = os.path.dirname(sys.executable)
+    else:
+        # The application is not frozen
+        # Change this bit to match where you store your data files:
+        datadir = os.path.dirname("./")
+    return os.path.join(datadir, filename)
+`}
+/>
+
+### bdist_msi
+
+You may have noticed that the build options are in-lined directly inside the options variable but the bdist_msi options
+are stored in their own variable. This is mainly for readability and separating the "meat" of this problem into
+its own section. Here's what my bdist_msi looks like:
+
+<CodeContainer
+  title="bdist_msi"
+  language="python"
+  value={`
+    bdist_msi_options = {
+    "summary_data": {
+        "author": "George",
+        "comments": "Sample application",
+        "keywords": "PySide6",
+    },
+    # Icon for the installer
+    "install_icon": find_data_file("icon.ico"),
+    "initial_target_dir": rf"C:\Program Files\{company_name}\{product_name}",
+    # Unique GUID for the application - for updates
+    "upgrade_code": UPGRADE_CODE,
+    "data": msi_data,
+    "all_users": True,
+    # Skip the build process - use to build and sign the exe separately
+    # run build command first, then sign the exe, then run this command
+    "skip_build": False,
+    }
+`}
+/>
+
+The most important options here are:
+
+initial_target_dir
+: Target install location, or where you want the program to be located on the user's machine.
+
+upgrade_code
+: A GUID that you generate to represent your application. This way when the version increases on your application,
+the operating system knows that it is the same software and should replace the old version
+
+all_users
+: Determines if the application is installed for all users on the target machine or just the logged on user.
+
+data
+: Stores any custom MSI data needed for your installation.
+
+You may notice that the `initial_target_dir` is hardcoded to the C: drive, which is not great. This is just to give the
+`initial_target_dir` a value. It gets overwritten during the final installation process.
+
+This is where information started being harder to find, in regard to properly configuring the bdist_msi options. Some of
+the options available are not documented well, and required a bit of digging to find out they existed and how to use them.
+
+**Before going forward** you should understand at a basic level that MSIs are more akin to a lot of small database tables
+that contain information about your program and how to install it. This can be difficult to wrap your head around, as it
+is different from the typical scripting approach. It may be beneficial if you install Orca (mentioned further down) and
+opening an installer for yourself.
+
+With that out of the way, the `msi_data` variable contains _tables_ that are to be inserted into the MSI package:
+
+<CodeContainer
+  title="msi_data"
+  language="python"
+  value={`
+    # This will be part of the 'data' option of bdist_msi
+    msi_data = {
+    "Shortcut": shortcut_table,
+    "Property": property_table,
+    "CustomAction": custom_action_table,
+    "InstallExecuteSequence": sequence_table,
+    }
+`}
+/>
+
+### [Shortcut Table](https://learn.microsoft.com/en-us/windows/win32/msi/shortcut-table)
+
+As you may guess by the name, the Shortcut table is responsible for creating shortcuts on the target machine. It has
+quite a few columns, all of which can be seen in the linked documentation. Of those, the ones worth paying attention to the most are:
+
+- Directory\_
+- Identifier for the directory table
+- Name
+- Name of your shortcut
+- Target
+- Shortcut target - your program
+
+<CodeContainer
+  title=" Shortcut Table"
+  language="python"
+  value={`
+    shortcut_table = [
+    (
+        "DesktopShortcut",           # Shortcut
+        "DesktopFolder",             # Directory_
+        "MH Label Printer",          # Name
+        "TARGETDIR",  # Component_
+        f"[TARGETDIR]{TARGET_NAME}", # Target
+        None,                        # Arguments
+        None,                        # Description
+        None,                        # Hotkey
+        "",                          # Icon - None for default
+        None,                        # IconIndex
+        None,                        # ShowCmd
+        "TARGETDIR",                 # WkDir
+    ),
+    (
+        "StartMenuShortcut",         # Shortcut
+        "StartMenuFolder",           # Directory_
+        "MH Label Printer",          # Name
+        "TARGETDIR",                 # Component_
+f"[TARGETDIR]{TARGET_NAME}",         # Target
+        None,                        # Arguments
+        None,                        # Description
+        None,                        # Hotkey
+        "",                          # Icon - None for default
+        None,                        # IconIndex
+        None,                        # ShowCmd
+        "TARGETDIR",                 # WkDir
+    ),
+    ]
+`}
+/>
+
+Notice how the Directory\_ column has some interesting values for both shortcut entries. `DesktopFolder` and `StartMenuFolder`.
+These are [System Folder Properties](https://learn.microsoft.com/en-us/windows/win32/msi/property-reference#system-folder-properties),
+which are environment variables for common locations on the target machine.
+
+### [Property Table](https://learn.microsoft.com/en-us/windows/win32/msi/property-table)
+
+The property table contains names and values for any defined properties used in the installation. I have set `TARGETDIR`
+to "test" here. This property is also set by cx_freeze itself via the `initial_target_dir` variable from earlier.
+
+<CodeContainer
+  title="Property Table"
+  language="python"
+  value={`
+    property_table = [
+    ("TARGETDIR", "test"),
+    ("MANUFACTURER", company_name),
+    ("PUBLISHER", company_name),
+    ]
+`}
+/>
+
+### [Custom Action Table](https://learn.microsoft.com/en-us/windows/win32/msi/customaction-table)
+
+The custom action table is for you to include custom code or functionality in your installation package.
+There are a [wide variety of available action types](https://learn.microsoft.com/en-us/windows/win32/msi/summary-list-of-all-custom-action-types),
+but the one we are inteterested in is number **51**, "Property set with formatted text." The _formatted text_ part of that is important.
+The formatted text allows the use of the **environment variables**. Thus, we can change the target directory using information gathered **during** the installation.
+
+<CodeContainer
+  title=" Custom Action Table"
+  language="python"
+  value={`
+    # Custom Actions table
+    custom_action_table = [
+    (
+        "SetTargetDir",
+        "51",
+        "TARGETDIR",
+        f"[%PROGRAMFILES]" + f"\\{company_name}\\{product_name}",
+    )
+    ]
+`}
+/>
+
+After including this in the installer, we have the action to set the `TARGETDIR` property, but it is not being
+used anywhere in the process yet. That is where the Sequence Table comes in.
+
+### [Sequence Table](https://learn.microsoft.com/en-us/windows/win32/msi/using-a-sequence-table)
+
+There are a few sequence tables that can be used when creating an MSI, depending on if the installation is an Advertisement,
+done by an Admin, or just ran by a user. The one we are interested in is `InstallExecuteSequence`, which is what happens
+when the installer is run in silent mode (no UI or console window popup)
+
+<CodeContainer
+  title="find_data_file"
+  language="python"
+  value={`
+    # Add custom action to sequence table
+    sequence_table = [
+    ("SetTargetDir", "", "800"),
+    ]
+`}
+/>
+
+We only have one entry here, and it is adding our custom action to sequence 800. It took some trial and error to find
+out how far into the installation is correct. Too early and it will get overridden by the cx_freeze options;
+too late and the installer has already started with the original value.
+
+## Testing the MSI
+
+Adding these custom tables to the MSI installer required a bit of trial and error. You can probably add
+some of the other MSI tables as well, assuming the correct values are provided. There are a few tools that will be useful for this section:
+
+- [CMTrace](https://learn.microsoft.com/en-us/mem/configmgr/core/support/tools) - Allows you to view a logfile as it is
+  running. Use when running MSIs with verbose logging enabled
+- [Orca](https://learn.microsoft.com/en-us/windows/win32/msi/orca-exe) - For viewing created MSI files and inspecting the
+  tables within. Can also be used to make / apply transformation files, but I did not find that to be necessary for this
+  process. Most useful for debugging and comparing your MSI to a functioning one.
+- [PsExec](https://learn.microsoft.com/en-us/sysinternals/downloads/psexec) - Lets you simulate running your installer
+  as the "System" user. Only important if you are creating an MSI to be used with deployment software. Depending on the
+  privilleges of your Active Directory environment and where your application writes files, you may run into permission
+  issues (I sure did!).
+
+When you are ready to test your MSI file, run `python setup.py bdist_msi` to build and package your program.
+We will complete the following steps:
+
+1. Use PsExec to open a command prompt as the **LOCAL SYSTEM** account. <sup>[1]</sup>
+2. Run installer with options for silent install `/Qn` and verbose logging `/lV*`
+3. Inspect package with Orca if not functioning as expected. For example, when trying to find the correct sequence
+   value for the custom action described above, I had to do _a lot_ of trial and error with Orca and CMTrace
+
+See below for an example:
+
+![psexec_example](@public/psexec_example.jpg)
+
+Now, run the installation command, with logging:
+`msiexec.exe /i "MSI_LOCATION"/qN /lV* "LOGFILE_OUTPUT_LOCATION"`
+
+You should see a log file appear at the specified location. Open the logfile with CMTrace. I advise keeping an eye on
+this as it installs. If you have made a mistake with the MSI tables you are adding manually to the installer,
+it tends to fail early on. Look for red lines in CM_Trace and start reading up until you find the error.
+The Windows Installer Error Messages page <sup>[2]</sup> will be useful for understanding any messages that appear.
+Here is an example of the CMTrace interface:
+
+![CMTrace example](@public/cmtrace.jpg)
+
+If you need to open the file with Orca and already have it installed,there will be an "Edit with Orca" option in the
+right click menu for any MSI file. You will see a list of tables inside the left sidebar. The rows on the right show
+what is included in the selected table.
+
+![Orca example](@public/orca.jpg)
+
+## Conclusion
+
+I hope this has been helpful for anyone who is trying to create an MSI installer for their Python application. One resource
+that I found very useful was [this series](https://learn.microsoft.com/en-us/archive/blogs/robmen/deciphering-the-msi-directory-table-part-6-standard-directories)
+of blog posts by Rob Mensching, who worked on the MSI format for Windows Installer.
+He also is behind the [WIX Toolset](https://wixtoolset.org/) which is a very popular tool for creating MSI installers.
+
+[1]: https://specopssoft.com/blog/how-to-become-the-local-system-account-with-psexec/
+[2]: https://learn.microsoft.com/en-us/windows/win32/msi/windows-installer-error-messages
