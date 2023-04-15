@@ -10,7 +10,6 @@ export default defineConfig({
       enforce: "pre",
       ...mdx({ remarkPlugins: [remarkMdxFrontmatter] }),
     },
-    scss(),
 
     react(),
   ],
