@@ -122,3 +122,12 @@ img {
   margin: 0 auto;
   display: block;
 }
+
+@media (max-width: 480px) {
+  #blogs-container {
+    max-width: 100%;
+    padding: 0;
+    width: 100%;
+    margin: 10px 0;
+  }
+}
