@@ -1,25 +1,32 @@
-import CodeContainer from "../../components/CodeContainer";
-export const title =
-  "Creating MSIs with cx_Freeze for Distribution to Managed Users";
-export const date = "2023-04-15";
-export const tags = ["python", "cx_freeze", "msi", "windows"];
+import CodeContainer from "../components/CodeContainer.jsx";
+
+export const frontMatter = {
+  title: "Creating MSIs with cx_Freeze for Distribution to Managed Users",
+  date: "2023-04-15",
+  tags: ["python", "cx_freeze", "msi", "windows"],
+  excerpt:
+    "A deeper look into creating MSIs with cx_Freeze for distribution to managed users, and some of the undocumented " +
+    "options available. when using cx_Freeze to package your application into an MSI.",
+  slug: "creating-msis-with-cx_freeze",
+  fileName: "CxFreeze",
+};
+export const fileName = "CxFreeze";
 
 # Creating MSIs with cx_Freeze for Distribution to Managed Users
 
-Distributing software applications in a managed enterprise environment can be a complex and challenging task.
-One popular method for deploying and managing software across multiple machines is to use Windows MSI files, which
-provide a standardized and reliable way of managing application installations, updates, and removals. A recent project
-I worked on required the creation of an MSI file for a Python application using the cx_Freeze library. Throughout this post,
-I will examine some of the challenges faced during this project, specifically surrounding customizing the installation process
-so that it could be distributed to users with varying permissions. I will also discuss some of the tools I used
-to create the MSI file, and how I was able to move past some of the challenges caused by the sparse documentation of
-cx_Freeze.
+Deploying software applications in a managed enterprise setting can be quite complicated. A widely used approach for
+distributing and managing software on multiple computers involves utilizing Windows MSI files. These files offer a
+consistent and dependable method for managing app installations, updates, and uninstalls. In a recent project, I had to
+create an MSI file for a Python app using the cx_Freeze library. In this post, I'll delve into some of the hurdles
+encountered during the project, particularly regarding the customization of the installation process to accommodate
+users with different permissions. Additionally, I'll talk about some of the tools I employed to develop the MSI file
+and how I overcame the challenges posed by the limited documentation of cx_Freeze.
 
 <br />
 
 ## Setup.py
 
-Setup.py is used by cx*freeze to set options for freezing and building your application into an executable \_and*
+Setup.py is used by **cxfreeze** to set options for freezing and building your application into an executable _and_
 for packaging that executable into an installer. In this case, an MSI using the `bdist_msi` command.
 
 An example options variable looks like this:
